@@ -91,15 +91,6 @@ const getMasterReducer =
 };
 /* eslint-enable */
 
-/////////////// SLICE CREATION //////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-/** Helper function used as quasi-replacement of createSlice from redux-toolkit */
-export const getSlice = <S, ReducerMap extends Record<string, AnyFunction>>(actionPrefix: string, initialState: S, basicReducers: ReducerMap) => {
-  const reducer = getMasterReducer(basicReducers, initialState, actionPrefix);
-  const actions = getActionCreators(basicReducers, actionPrefix);
-  return { reducer, actions };
-};
-
 /////////////// REDUCER DECORATORS //////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /** @summary wraps an action (using mutation instead of FP, return type void) in immer's 'produce' function. */
@@ -144,27 +135,33 @@ function upperCaseFirstLetter(string:string) {
 
 const getVariableNameFromSetFunctionName = <T extends string>(setFunctionName:T) => lowerCaseFirstLetter(setFunctionName!.replace("set", ""))
 /** function name eg. "setRenderNodes" */
-const setter = <PropertyName extends string, PayloadType, State>(functionName: PropertyName) => (state: State, payload:PayloadType) => {
+const setter = <PropertyName extends string, PayloadType, S>(functionName: PropertyName) => (state: S, payload:PayloadType) => {
   const newState = {...state};
   (newState as any)[getVariableNameFromSetFunctionName(functionName)] = payload;
-  return newState as State;
+  return newState as S;
 }
 
-type setterType<State, PayloadType> = (state: State, payload:PayloadType) => State;
+type setterType<S, PayloadType> = (state: S, payload:PayloadType) => S;
 
 type Replace<T extends string, S extends string, D extends string,
   A extends string = ""> = T extends `${infer L}${S}${infer R}` ?
   Replace<R, S, D, `${A}${L}${D}`> : `${A}${T}`
-  
-type ReconciledReducerMap<State, ReducerMap extends Record<string, ReducerFunction>> = { 
-  [K in keyof ReducerMap] :
-  K extends string ? ReducerMap[K] extends "setter" ? Uncapitalize<Replace<K,"set","">> extends Keys<State> ? setterType<State, State[Uncapitalize<Replace<K,"set","">>]> : never : never :  
-  ReducerMap[K] }
 
 type ReducerFunction = "setter" | AnyFunction;
 
-export const getAutoDuxedReducers = <State, ReducerMap extends Record<string, ReducerFunction>>(
+type ReconciledReducerMap<State, ReducersMap extends Record<string,ReducerFunction>> = { 
+  [K in Keys<ReducersMap>] :
+  ReducersMap[K] extends "setter" ?
+    (K extends string ?
+      Uncapitalize<Replace<K,"set","">> extends Keys<State> ? 
+        setterType<State, State[Uncapitalize<Replace<K,"set","">>]> : 
+      never :  
+    never) :
+  ReducersMap[K] }
+
+const getAutoDuxedReducers = <State, ReducerMap extends Record<string, ReducerFunction>>(
   reducerMap: ReducerMap,
+  _ : State,
 ): ReconciledReducerMap<State, ReducerMap>  => {
   const entries = Object.entries(reducerMap);
   const mapped = entries.map(e => {
@@ -175,4 +172,14 @@ export const getAutoDuxedReducers = <State, ReducerMap extends Record<string, Re
     return [e[0], e[1]];
   });
   return Object.fromEntries(mapped) as ReconciledReducerMap<State, ReducerMap>;
+};
+
+/////////////// SLICE CREATION //////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+/** Helper function used as quasi-replacement of createSlice from redux-toolkit */
+export const getSlice = <S, ReducerMap extends Record<string, AnyFunction>>(actionPrefix: string, initialState: S, basicReducers: ReducerMap) => {
+  const autoDuxedReducers = getAutoDuxedReducers(basicReducers, initialState);
+  const reducer = getMasterReducer(autoDuxedReducers, initialState, actionPrefix);
+  const actions = getActionCreators(autoDuxedReducers, actionPrefix);
+  return { reducer, actions };
 };
