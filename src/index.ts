@@ -51,23 +51,23 @@ type ActionCreator<ActionName, PayloadType> = (payload: PayloadType) => { type: 
  * `{add:ActionCreator<"add",number>,log:ActionCreator<"log",string>}`  
  * @see {@link https://www.typescriptlang.org/docs/handbook/2/mapped-types.html}
  */
-type ActionCreatorMap<ReducerMap extends Record<string, AnyFunction>> = { 
+type ActionCreatorMap<ReducerMap extends Record<string, ReducerFunction>> = { 
   // the keys of the new object shall be the same as the supplied ReducerMap
   [K in Keys<ReducerMap>]:
   // the values of the new object shall be that of an action creator,
   // using the key name as the action type string and the second argument (Parameter) of the supplied function as payload type
-  ActionCreator<K, Parameters<ReducerMap[K]>[1]>; 
+  ReducerMap[K] extends AnyFunction ? ActionCreator<K, Parameters<ReducerMap[K]>[1]> : never; 
 };
 
 /** we only need to supply the second arg for type inference purposes.*/
 const getActionCreatorFromBasicReducer = 
-<State, PayloadType, ActionName>(name: ActionName, _: BasicReducer<State, PayloadType>): ActionCreator<ActionName, PayloadType> => {
+<State, PayloadType, ActionName>(name: ActionName, _: ReducerFunction): ActionCreator<ActionName, PayloadType> => {
   return (payload: PayloadType) => ({ type: name, payload });
 };
 
 /** @summary Get a set of action creators from a set of basic reducers.  
  * @description Uses Object.entries, Array.map, Object.fromEntries internally. */
-const getActionCreators = <ReducerMap extends Record<string, AnyFunction>>(
+const getActionCreators = <ReducerMap extends Record<string, ReducerFunction>>(
   reducerMap: ReducerMap,
   actionNamePrefix: string,
 ): ActionCreatorMap<ReducerMap> => {
@@ -141,7 +141,7 @@ const setter = <PropertyName extends string, PayloadType, S>(functionName: Prope
   return newState as S;
 }
 
-type setterType<S, PayloadType> = (state: S, payload:PayloadType) => S;
+type setterType<State, PayloadType> = (state: State, payload:PayloadType) => State;
 
 type Replace<T extends string, S extends string, D extends string,
   A extends string = ""> = T extends `${infer L}${S}${infer R}` ?
@@ -149,7 +149,7 @@ type Replace<T extends string, S extends string, D extends string,
 
 type ReducerFunction = "setter" | AnyFunction;
 
-type ReconciledReducerMap<State, ReducersMap extends Record<string,ReducerFunction>> = { 
+export type ReconciledReducerMap<State, ReducersMap extends Record<string, ReducerFunction>> = { 
   [K in Keys<ReducersMap>] :
   ReducersMap[K] extends "setter" ?
     (K extends string ?
@@ -177,7 +177,8 @@ const getAutoDuxedReducers = <State, ReducerMap extends Record<string, ReducerFu
 /////////////// SLICE CREATION //////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /** Helper function used as quasi-replacement of createSlice from redux-toolkit */
-export const getSlice = <S, ReducerMap extends Record<string, AnyFunction>>(actionPrefix: string, initialState: S, basicReducers: ReducerMap) => {
+type BasicReducerMap = Record<string, AnyFunction>
+export const getSlice = <S, ReducerMap extends Record<string, ReducerFunction>>(actionPrefix: string, initialState: S, basicReducers: ReducerMap) => {
   const autoDuxedReducers = getAutoDuxedReducers(basicReducers, initialState);
   const reducer = getMasterReducer(autoDuxedReducers, initialState, actionPrefix);
   const actions = getActionCreators(autoDuxedReducers, actionPrefix);
