@@ -1,9 +1,10 @@
 {
   "name": "@triazic/redux-utils",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "",
   "src": "src/index.ts",
   "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -14,6 +15,8 @@
     "immer": "^9.0.15"
   },
   "devDependencies": {
-    "parcel": "^2.6.2"
+    "@parcel/packager-ts": "2.6.2",
+    "@parcel/transformer-typescript-types": "2.6.2",
+    "typescript": ">=3.0.0"
   }
 }

@@ -132,3 +132,47 @@ export const decorators = <S>() => ({
   _: withStateType<S>(),
   immer: withProduceAndStateType<S>(),
 });
+
+/////////////// AUTODUX-STYLE FUNCTIONALITY //////////////////////////////////////////////////////////////////////////////////////////////////////
+
+function lowerCaseFirstLetter(string:string) {
+  return string.charAt(0).toLowerCase() + string.slice(1);
+}
+function upperCaseFirstLetter(string:string) {
+  return string.charAt(0).toUpperCase() + string.slice(1);
+}
+
+const getVariableNameFromSetFunctionName = <T extends string>(setFunctionName:T) => lowerCaseFirstLetter(setFunctionName!.replace("set", ""))
+/** function name eg. "setRenderNodes" */
+const setter = <PropertyName extends string, PayloadType, State>(functionName: PropertyName) => (state: State, payload:PayloadType) => {
+  const newState = {...state};
+  (newState as any)[getVariableNameFromSetFunctionName(functionName)] = payload;
+  return newState as State;
+}
+
+type setterType<State, PayloadType> = (state: State, payload:PayloadType) => State;
+
+type Replace<T extends string, S extends string, D extends string,
+  A extends string = ""> = T extends `${infer L}${S}${infer R}` ?
+  Replace<R, S, D, `${A}${L}${D}`> : `${A}${T}`
+  
+type ReconciledReducerMap<State, ReducerMap extends Record<string, ReducerFunction>> = { 
+  [K in keyof ReducerMap] :
+  K extends string ? ReducerMap[K] extends "setter" ? Uncapitalize<Replace<K,"set","">> extends Keys<State> ? setterType<State, State[Uncapitalize<Replace<K,"set","">>]> : never : never :  
+  ReducerMap[K] }
+
+type ReducerFunction = "setter" | AnyFunction;
+
+export const getAutoDuxedReducers = <State, ReducerMap extends Record<string, ReducerFunction>>(
+  reducerMap: ReducerMap,
+): ReconciledReducerMap<State, ReducerMap>  => {
+  const entries = Object.entries(reducerMap);
+  const mapped = entries.map(e => {
+    const isSetter = e[1] == "setter";
+    if (isSetter) {
+      return [e[0], setter(e[0])];
+    }
+    return [e[0], e[1]];
+  });
+  return Object.fromEntries(mapped) as ReconciledReducerMap<State, ReducerMap>;
+};
