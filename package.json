@@ -1,6 +1,6 @@
 {
   "name": "@triazic/redux-utils",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "",
   "src": "src/index.ts",
   "main": "dist/index.js",
