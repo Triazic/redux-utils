@@ -1,0 +1,22 @@
+{
+    "$schema": "https://json.schemastore.org/tsconfig.json",
+    "include": ["src"],
+    "compilerOptions": {
+      "target": "ESNext",
+      "lib": ["ESNext"],
+      "allowJs": true,
+      "skipLibCheck": true,
+      "esModuleInterop": true,
+      "allowSyntheticDefaultImports": true,
+      "strict": true,
+      "forceConsistentCasingInFileNames": true,
+      "noFallthroughCasesInSwitch": true,
+      "module": "esnext",
+      "moduleResolution": "node",
+      "resolveJsonModule": true,
+      "isolatedModules": false,
+      "noEmit": true,
+      "outDir": "dist"
+    }
+  }
+  

@@ -1,6 +1,5 @@
 import { AnyAction, Draft, PayloadAction, Reducer } from "@reduxjs/toolkit";
 import produce from "immer";
-import { AnyFunction, Keys } from "./generalHelpers";
 
 // redux-toolkit's createSlice:
 // 1. forces you to use immer
@@ -31,6 +30,9 @@ import { AnyFunction, Keys } from "./generalHelpers";
 
 /** a reducer which uses its payload directly instead of getting pushed through an action wrapper. */
 type BasicReducer<State, PayloadType> = (state: State, payload: PayloadType) => State;
+type Keys<T> = keyof T;
+type Values<T> = T[Keys<T>];
+type AnyFunction = (...args: any) => any;
 
 /////////////// ACTION CREATION /////////////////////////////////////////////////////////////////////////////////////////////////////////
 
